@@ -120,11 +120,8 @@ function onClickCheck() {
   list.append("Checking...");
   var text = $('#text');
   text.removeClass().html("");
-
   var e = document.getElementById('languages-select')
   var language = e.options[e.selectedIndex].value;
-
-
   var text = google.script.run
     .withSuccessHandler(
       function(msg) {
@@ -138,15 +135,12 @@ function onClickCheck() {
             break;
           }
         }
-
         var list = $('#things');
         list.empty();
-
         if (matches.length == 0) {
           list.append("No errors found.");
           list.append("<br/><br/>");
         }
-
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
           strbuilder = "<div class=match id=error" + i + " onclick=focusOnError(" + i + ")>" + "<div class=message>" + match.message + "</div>";
@@ -168,7 +162,7 @@ function onClickCheck() {
           list.append(strbuilder);
         }
         list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="https://www.languagetool.org">languagetool.org</a></span></div>');
-        g_matches = matches;
+        g_matches = matches; // store the results in a global variable
       })
     .withFailureHandler(
       function(msg, element) {
@@ -177,25 +171,5 @@ function onClickCheck() {
         element.disabled = false;
       })
     .CheckText(language);
-}
-/**
- * Displays the given status message in the sidebar.
- *
- * @param {String} msg The status message to display.
- * @param {String} classId The message type (class id) that the message
- *   should be displayed as.
- */
-function showStatus(msg, classId) {
-  $('#sidebar-status').removeClass().html(msg);
-  if (classId) {
-    $('#sidebar-status').addClass(classId);
-  }
-}
-
-function showFeedback(msg, classId) {
-  $('#sidebar-feedback').removeClass().html(msg);
-  if (classId) {
-    $('#sidebar-feedback').addClass(classId);
-  }
 }
 </script>
