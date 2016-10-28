@@ -11,7 +11,7 @@ var g_previous = -1;
 $(function() {
   // Assign handler functions to sidebar elements here, if needed.
   $('#sidebar-review-button').click(onClickCheck);
-
+  
   //add languages to drop down list
   var languagesSelect = document.getElementById('languages-select');
   languagesSelect.options[0] = new Option('(auto-detect)', 'auto');
@@ -29,6 +29,8 @@ $(function() {
         // Respond to failure conditions here.            
       })
     .GetLanguages();
+ 
+  onClickCheck(); // start checking
 });
 
 function focusOnError(i) {
@@ -173,3 +175,4 @@ function onClickCheck() {
     .CheckText(language);
 }
 </script>
+
