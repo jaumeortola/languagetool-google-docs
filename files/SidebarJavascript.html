@@ -3,7 +3,6 @@
 /* Globals*/
 
 var MAX_REPLACEMENTS = 5;
-var ARRAY_FIELDS = 5;
 var g_matches = 0;
 var g_previous = -1;
 /**
@@ -69,7 +68,6 @@ function removeFocusFromError(i) {
 }
 
 function replaceSuggestion(i, replacement) {
-  var fullcontext = g_matches[i].context.text;
   var context = splitAndTrimContext(g_matches[i]);
   var text = google.script.run
     .withSuccessHandler(
