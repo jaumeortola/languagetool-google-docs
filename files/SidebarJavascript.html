@@ -1,0 +1,203 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>
+/* Globals*/
+
+var MAX_REPLACEMENTS = 5;
+var ARRAY_FIELDS = 5;
+var g_matches = 0;
+var g_previous = -1;
+/**
+ * Run initializations on sidebar load.
+ */
+$(function() {
+  // Assign handler functions to sidebar elements here, if needed.
+  $('#sidebar-review-button').click(onClickCheck);
+
+  //add languages to drop down list
+  var languagesSelect = document.getElementById('languages-select');
+  languagesSelect.options[0] = new Option('(auto-detect)', 'auto');
+
+  var text = google.script.run
+    .withSuccessHandler(
+      function(msg) {
+        var langList = JSON.parse(msg);
+        for (j = 0; j < langList.length; j++) {
+          languagesSelect.options[j + 1] = new Option(langList[j].name, langList[j].longCode);
+        }
+      })
+    .withFailureHandler(
+      function(msg, element) {
+        // Respond to failure conditions here.            
+      })
+    .GetLanguages();
+});
+
+function focusOnError(i) {
+  var error = $('#error' + i);
+  while (error.length == 0 && i < g_matches.length) {
+    i = i + 1;
+    error = $('#error' + i);
+  }
+  if (i >= g_matches.length) {
+    return; // do nothing, there is no more errors
+  }
+  var context = splitAndTrimContext(g_matches[i]);
+  var text = google.script.run
+    .withSuccessHandler(
+      function(msg) {
+        if (msg === "Selected") {
+          error.css('background-color', '#EEEEEE');
+          if (g_previous != i) {
+            removeFocusFromError(g_previous);
+            g_previous = i;
+          }
+        }
+      })
+    .withFailureHandler(
+      function(msg, element) {
+        // Respond to failure conditions here.            
+        //element.disabled = false;
+      })
+    .SelectText(context[0], context[1], context[2]);
+}
+
+function removeFocusFromError(i) {
+  if (i >= 0 && i < g_matches.length) {
+    var error = $('#error' + i);
+    error.css('background-color', '#FFFFFF');
+  }
+}
+
+function replaceSuggestion(i, replacement) {
+  var fullcontext = g_matches[i].context.text;
+  var context = splitAndTrimContext(g_matches[i]);
+  var text = google.script.run
+    .withSuccessHandler(
+      function(msg) {
+        if (msg === "Replaced") {
+          if (g_previous != i) {
+            removeFocusFromError(g_previous);
+            g_previous = i;
+          }
+          var list = document.getElementById('things');
+          var used_error = document.getElementById('error' + i);
+          list.removeChild(used_error);
+          if (i + 1 < g_matches.length) {
+            focusOnError(i + 1);
+          }
+        }
+      })
+    .withFailureHandler(
+      function(msg, element) {
+        // Respond to failure conditions here.            
+        //element.disabled = false;
+      })
+    .SelectText(context[0], context[1], context[2], replacement);
+}
+
+function splitContext(match) {
+  var context = match.context.text;
+  var contextBefore = context.substring(0, match.context.offset);
+  var contextError = context.substring(match.context.offset, match.context.offset + match.context.length);
+  var contextAfter = context.substring(match.context.offset + match.context.length, context.length);
+  return [contextBefore, contextError, contextAfter];
+}
+
+function splitAndTrimContext(match) {
+  var context = match.context.text;
+  var contextBefore = context.substring(0, match.context.offset);
+  var contextError = context.substring(match.context.offset, match.context.offset + match.context.length);
+  var contextAfter = context.substring(match.context.offset + match.context.length, context.length);
+  while (contextBefore.charAt(0) === '.' || contextBefore.charAt(0) === ' ')
+    contextBefore = contextBefore.substr(1);
+  while (contextAfter.slice(-1) === '.' || contextAfter.slice(-1) === ' ')
+    contextAfter = contextAfter.slice(0, -1);
+  return [contextBefore, contextError, contextAfter];
+}
+
+function onClickCheck() {
+
+  var list = $('#things');
+  list.empty();
+  list.append("Checking...");
+  var text = $('#text');
+  text.removeClass().html("");
+
+  var e = document.getElementById('languages-select')
+  var language = e.options[e.selectedIndex].value;
+
+
+  var text = google.script.run
+    .withSuccessHandler(
+      function(msg) {
+
+        var obj = JSON.parse(msg);
+        var matches = obj.matches;
+
+        for (var m = 0, n = e.options.length; m < n; ++m) {
+          if (e.options[m].value === obj.language.code) {
+            e.selectedIndex = m;
+            break;
+          }
+        }
+
+        var list = $('#things');
+        list.empty();
+
+        if (matches.length == 0) {
+          list.append("No errors found.");
+          list.append("<br/><br/>");
+        }
+
+        for (var i = 0; i < matches.length; i++) {
+          match = matches[i];
+          strbuilder = "<div class=match id=error" + i + " onclick=focusOnError(" + i + ")>" + "<div class=message>" + match.message + "</div>";
+          var context = splitContext(match);
+          var errortype = 'grammar_error';
+          if (match.rule.issueType == 'misspelling') {
+            errortype = "spelling_error";
+          }
+          if (match.rule.issueType == 'style' || match.rule.issueType == 'locale-violation') {
+            errortype = "style_error";
+          }
+          strbuilder += "<div class=errorArea>" + context[0] + "<span class=" + errortype + ">" + context[1] + "</span>" + context[2] + "</div>";
+          suggestions = match.replacements;
+          suggestionsLen = Math.min(suggestions.length, MAX_REPLACEMENTS);
+          for (var j = 0; j < suggestionsLen; j++) {
+            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + suggestions[j].value + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
+          }
+          strbuilder += "</div>";
+          list.append(strbuilder);
+        }
+        list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="https://www.languagetool.org">languagetool.org</a></span></div>');
+        g_matches = matches;
+      })
+    .withFailureHandler(
+      function(msg, element) {
+        // Respond to failure conditions here.
+        showStatus(msg, 'error');
+        element.disabled = false;
+      })
+    .CheckText(language);
+}
+/**
+ * Displays the given status message in the sidebar.
+ *
+ * @param {String} msg The status message to display.
+ * @param {String} classId The message type (class id) that the message
+ *   should be displayed as.
+ */
+function showStatus(msg, classId) {
+  $('#sidebar-status').removeClass().html(msg);
+  if (classId) {
+    $('#sidebar-status').addClass(classId);
+  }
+}
+
+function showFeedback(msg, classId) {
+  $('#sidebar-feedback').removeClass().html(msg);
+  if (classId) {
+    $('#sidebar-feedback').addClass(classId);
+  }
+}
+</script>

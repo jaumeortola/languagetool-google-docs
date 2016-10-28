@@ -1,0 +1,20 @@
+<!-- Use a templated HTML printing scriptlet to import common stylesheet. -->
+<?!= HtmlService.createHtmlOutputFromFile('Stylesheet').getContent(); ?>
+
+
+    <div class="block form-group" id="sidebar-value-block">
+        <div class="inline">
+            <button class="action" id="sidebar-review-button">Check
+            text</button>
+        </div>
+        <div class="inline">
+            <label for="languages-select">Language</label>
+                <select id="languages-select">
+                </select>
+        </div>
+    </div>
+    <div class="block">
+        <div id="things"></div>
+    </div>
+
+<?!= HtmlService.createHtmlOutputFromFile('SidebarJavaScript').getContent(); ?>
