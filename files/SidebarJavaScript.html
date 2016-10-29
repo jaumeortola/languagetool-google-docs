@@ -69,6 +69,14 @@ function removeFocusFromError(i) {
   }
 }
 
+function removeError(i) {
+  var list = document.getElementById('things');
+  var used_error = document.getElementById('error' + i);
+  if (used_error.length != 0) {
+    list.removeChild(used_error);
+  }
+}
+
 function replaceSuggestion(i, replacement) {
   var context = splitAndTrimContext(g_matches[i]);
   var text = google.script.run
@@ -79,9 +87,7 @@ function replaceSuggestion(i, replacement) {
             removeFocusFromError(g_previous);
             g_previous = i;
           }
-          var list = document.getElementById('things');
-          var used_error = document.getElementById('error' + i);
-          list.removeChild(used_error);
+          removeError(i);
           if (i + 1 < g_matches.length) {
             focusOnError(i + 1);
           }
@@ -145,7 +151,7 @@ function onClickCheck() {
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
-          strbuilder = "<div class=match id=error" + i + " onclick=focusOnError(" + i + ")>" + "<div class=message>" + match.message + "</div>";
+          strbuilder = '<div class=match id=error' + i + ' onclick=focusOnError(' + i + ')>' + '<div class="icon-close" onclick=removeError(' + i + ')/><div class=message>' + match.message + '</div>';
           var context = splitContext(match);
           var errortype = 'grammar_error';
           if (match.rule.issueType == 'misspelling') {
