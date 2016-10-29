@@ -195,7 +195,7 @@ function onClickCheck() {
           suggestions = match.replacements;
           suggestionsLen = Math.min(suggestions.length, MAX_REPLACEMENTS);
           for (var j = 0; j < suggestionsLen; j++) {
-            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + suggestions[j].value + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
+            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + escapeSuggestion(suggestions[j].value) + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
           }
           strbuilder += "</div>";
           list.append(strbuilder);
@@ -210,6 +210,11 @@ function onClickCheck() {
           showMessage("Error: Cannot connect to server");
       })
     .CheckText(language);
+}
+
+
+function escapeSuggestion(sugg) {
+  return sugg.replace("'","\\'");
 }
 
 function showMessage(msg) {
