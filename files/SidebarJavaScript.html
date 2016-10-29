@@ -31,15 +31,33 @@ $(function() {
     .GetLanguages();
  
   onClickCheck(); // start checking
+  document.onkeydown = checkKey;
 });
 
-function focusOnError(i) {
+
+function checkKey(e) {
+    e = e || window.event;
+    if (e.keyCode == '37') {
+       // left arrow
+       focusOnError (g_previous - 1, true);
+    }
+    else if (e.keyCode == '39') {
+       // right arrow
+       focusOnError (g_previous + 1);
+    }
+}
+
+function focusOnError(i, descending = false) {
   var error = $('#error' + i);
-  while (error.length == 0 && i < g_matches.length) {
-    i = i + 1;
+  while (error.length == 0 && i < g_matches.length && i >= 0) {
+    if (descending) { 
+      i = i - 1;
+    } else {
+      i = i + 1;
+    }
     error = $('#error' + i);
   }
-  if (i >= g_matches.length) {
+  if (i >= g_matches.length || i < 0) {
     return; // do nothing, there is no more errors
   }
   var context = splitAndTrimContext(g_matches[i]);
@@ -48,6 +66,7 @@ function focusOnError(i) {
       function(msg) {
         if (msg === "Selected") {
           error.css('background-color', '#EEEEEE');
+          window.scroll(0,findPos(error[0]));
           if (g_previous != i) {
             removeFocusFromError(g_previous);
             g_previous = i;
@@ -60,6 +79,17 @@ function focusOnError(i) {
         //element.disabled = false;
       })
     .SelectText(context[0], context[1], context[2]);
+}
+
+
+function findPos(obj) {
+    var curtop = -200;
+    if (obj.offsetParent) {
+        do {
+            curtop += obj.offsetTop;
+        } while (obj = obj.offsetParent);
+    return [curtop];
+    }
 }
 
 function removeFocusFromError(i) {
@@ -148,6 +178,7 @@ function onClickCheck() {
         if (matches.length == 0) {
           list.append("No errors found.");
           list.append("<br/><br/>");
+          return;
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
@@ -171,6 +202,7 @@ function onClickCheck() {
         }
         list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="https://www.languagetool.org">languagetool.org</a></span></div>');
         g_matches = matches; // store the results in a global variable
+        focusOnError(0);
       })
     .withFailureHandler(
       function(msg, element) {
@@ -181,4 +213,3 @@ function onClickCheck() {
     .CheckText(language);
 }
 </script>
-
