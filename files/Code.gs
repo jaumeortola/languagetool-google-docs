@@ -33,9 +33,11 @@ function onInstall(e) {
 function CheckText(language) {
   language = typeof language !== 'undefined' ? language : 'auto';
   var text = DocumentApp.getActiveDocument().getBody().getText();
+  // avoid some bugs
+  var cleanText = text.replace(/\n/g,"\n\n").replace(/[ \t]+\n/g, "\n");
   var options = {
     "method": "post",
-    "payload": "text=" + encodeURIComponent(text) + "&language=" + language + "&useragent=googledocs"
+    "payload": "text=" + encodeURIComponent(cleanText) + "&language=" + language + "&useragent=googledocs"
   };
   var response = UrlFetchApp.fetch(LT_SERVER + "check", options);
   return response.getContentText();
@@ -46,19 +48,20 @@ function GetLanguages() {
   return response.getContentText();
 }
 
-function SelectText(contextBefore, contextError, contextAfter, replacement) {
+function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
   if (contextError === "") {
     return "NotFound";
   }
-  contextBefore = escapeRegExp(contextBefore);
-  contextError = escapeRegExp(contextError);
-  contextAfter = escapeRegExp(contextAfter);
+  var contextBefore = escapeRegExp(cntxtBefore);
+  var contextError = escapeRegExp(cntxtError);
+  var contextAfter = escapeRegExp(cntxtAfter);
   var doc = DocumentApp.getActiveDocument();
   var body = doc.getBody();
 
   var rangeBefore;
   var rangeError;
   var rangeAfter;
+  var rangeAux;
 
   if (contextBefore != "") {
     rangeBefore = body.findText(contextBefore);
@@ -69,20 +72,43 @@ function SelectText(contextBefore, contextError, contextAfter, replacement) {
   if (rangeBefore != null) {
     // try to find the error after rangeBefore 
     rangeError = body.findText(contextError, rangeBefore);    
-  } else {
-    if (rangeAfter != null) {
+  } else if (rangeAfter != null) {
       // try to find from the start of the paragraph containing rangeAfter
       rangeError = rangeAfter.getElement().asText().findText(contextError);
       while (rangeAfter.getStartOffset() - rangeError.getEndOffsetInclusive() > 2 &&
         rangeAfter.getStartOffset() > rangeError.getEndOffsetInclusive()) {
           rangeError = body.findText(contextError, rangeError);
         }
-    } else {
-      // try to find error from the start
-      rangeError = body.findText(contextError);
-    }
   }
-
+  // try to find the paragraph containing the "short" context. 
+  if (rangeError == null) {
+    var shortContext = escapeRegExp(getShortContext(cntxtBefore, cntxtError, cntxtAfter, 5));
+    rangeAux = body.findText(shortContext);
+    if (rangeAux != null) {
+      rangeError = rangeAux.getElement().asText().findText(contextError);
+    }
+  } 
+  // the error is at the sentence end
+  if (rangeError == null) {
+    var shortContext = escapeRegExp(getShortContext(cntxtBefore, cntxtError, "", 5));
+    rangeAux = body.findText(shortContext);
+    if (rangeAux != null) {
+      rangeError = rangeAux.getElement().asText().findText(contextError);
+    }
+  } 
+  // the error is at the sentence start
+  if (rangeError == null) {
+    var shortContext = escapeRegExp(getShortContext("", cntxtError, cntxtAfter, 5));
+    rangeAux = body.findText(shortContext);
+    if (rangeAux != null) {
+      rangeError = rangeAux.getElement().asText().findText(contextError);
+    }
+  } 
+  // Catch-all case. Try to find error anywhere.
+  if (rangeError == null) {
+    rangeError = body.findText(contextError);
+  }
+ 
   if (rangeError == null || (rangeAfter != null && rangeError.getEndOffsetInclusive() > rangeAfter.getStartOffset())) {
     return "NotFound";
   }
@@ -99,6 +125,23 @@ function SelectText(contextBefore, contextError, contextAfter, replacement) {
     return "Replaced";
   }
   return "Selected";
+}
+
+
+function getShortContext(contextBefore, contextError, contextAfter,len) {
+  var shortCntxt = "";
+  if (contextBefore.length >= len) {
+    shortCntxt = contextBefore.slice(-len);
+  } else {
+    shortCntxt = contextBefore;
+  }
+  shortCntxt = shortCntxt + contextError;
+  if (contextAfter.length >= len) {
+    shortCntxt = shortCntxt + contextAfter.substring(0,len);
+  } else {
+    shortCntxt = shortCntxt + contextAfter;
+  }
+  return shortCntxt;
 }
 
 function escapeRegExp(str) {
