@@ -5,7 +5,7 @@ var DIALOG_TITLE = 'Example Dialog';
 var SIDEBAR_TITLE = 'LanguageTool proof­reading';
 
 var LT_SERVER = 'https://languagetool.org/api/v2/';
-//LT_SERVER = 'https://www.softcatala.org/languagetool/api/v2/';
+//var LT_SERVER = 'https://www.softcatala.org/languagetool/api/v2/';
 
 /**
  * Adds a custom menu with items to show the sidebar and dialog.
@@ -35,8 +35,7 @@ function CheckText(language) {
   var text = DocumentApp.getActiveDocument().getBody().getText();
   var options = {
     "method": "post",
-    "payload": "text=" + encodeURIComponent(text) + "&language=" + language
-      // Set User-Agent here??
+    "payload": "text=" + encodeURIComponent(text) + "&language=" + language + "&useragent=googledocs"
   };
   var response = UrlFetchApp.fetch(LT_SERVER + "check", options);
   return response.getContentText();
