@@ -26,7 +26,7 @@ $(function() {
       })
     .withFailureHandler(
       function(msg, element) {
-        // Respond to failure conditions here.            
+        showMessage("Error: Cannot connect to server");
       })
     .GetLanguages();
  
@@ -37,12 +37,10 @@ $(function() {
 
 function checkKey(e) {
     e = e || window.event;
-    if (e.keyCode == '37') {
-       // left arrow
+    if (e.keyCode == '37') { // left arrow
        focusOnError (g_previous - 1, true);
     }
-    else if (e.keyCode == '39') {
-       // right arrow
+    else if (e.keyCode == '39') { // right arrow
        focusOnError (g_previous + 1);
     }
 }
@@ -66,7 +64,7 @@ function focusOnError(i, descending = false) {
       function(msg) {
         if (msg === "Selected") {
           error.css('background-color', '#EEEEEE');
-          window.scroll(0,findPos(error[0]));
+          window.scroll(0,adjustScroll(error[0]));
           if (g_previous != i) {
             removeFocusFromError(g_previous);
             g_previous = i;
@@ -81,15 +79,17 @@ function focusOnError(i, descending = false) {
     .SelectText(context[0], context[1], context[2]);
 }
 
-
-function findPos(obj) {
-    var curtop = -200;
-    if (obj.offsetParent) {
-        do {
-            curtop += obj.offsetTop;
-        } while (obj = obj.offsetParent);
-    return [curtop];
-    }
+function adjustScroll(obj) {
+   var offset = obj.offsetTop ;
+   var maxHeight = window.innerHeight * 0.70;
+   var minHeight = 76;
+   if (offset - window.scrollY > maxHeight) {
+     return offset - maxHeight;
+   } else if (offset - window.scrollY < minHeight) {
+     return offset - minHeight;
+   } else {
+     return window.scrollY;
+   }
 }
 
 function removeFocusFromError(i) {
@@ -207,9 +207,14 @@ function onClickCheck() {
     .withFailureHandler(
       function(msg, element) {
         // Respond to failure conditions here.
-        showStatus(msg, 'error');
-        element.disabled = false;
+          showMessage("Error: Cannot connect to server");
       })
     .CheckText(language);
+}
+
+function showMessage(msg) {
+  var list = $('#things');
+  list.empty();
+  list.append(msg);
 }
 </script>
