@@ -1,7 +1,7 @@
 /**
  * Server side code
  */
-var DIALOG_TITLE = 'Example Dialog';
+var DIALOG_TITLE = 'LanuageTool Options';
 var SIDEBAR_TITLE = 'LanguageTool proof­reading';
 
 var LT_SERVER = 'https://languagetool.org/api/v2/';
@@ -16,9 +16,9 @@ function onOpen(e) {
   DocumentApp.getUi()
     .createAddonMenu()
     .addItem("Check", 'showSidebar')
-    //.addItem("Options", 'showDialog')
+    .addItem("Options", 'showDialog')
     .addToUi();
-}
+ }
 
 /**
  * Runs when the add-on is installed; calls onOpen() to ensure menu creation and
@@ -30,21 +30,37 @@ function onInstall(e) {
   onOpen(e);
 }
 
+function getLTServer() {
+  var server = PropertiesService.getUserProperties().getProperty("LT_SERVER");
+  if (server != null && server.length > 5)
+    return server;
+  else 
+    return LT_SERVER;
+}
+
 function CheckText(language) {
   language = typeof language !== 'undefined' ? language : 'auto';
   var text = DocumentApp.getActiveDocument().getBody().getText();
   // avoid some bugs
   var cleanText = text.replace(/\n/g,"\n\n").replace(/[ \t]+\n/g, "\n");
+  var data = "text=" + encodeURIComponent(cleanText) + "&language=" + language + "&useragent=googledocs";
+  if (language == "auto") {
+    var userProp = PropertiesService.getUserProperties();
+    var preferredVariants= userProp.getProperty("VARIANT_EN")+","+ userProp.getProperty("VARIANT_DE")+","+ userProp.getProperty("VARIANT_PT")+","+ userProp.getProperty("VARIANT_CA");
+    data += "&preferredVariants=" + preferredVariants;
+  }
   var options = {
     "method": "post",
-    "payload": "text=" + encodeURIComponent(cleanText) + "&language=" + language + "&useragent=googledocs"
+    "payload": data
   };
-  var response = UrlFetchApp.fetch(LT_SERVER + "check", options);
+  var response = UrlFetchApp.fetch(getLTServer() + "check", options);
   return response.getContentText();
 }
 
 function GetLanguages() {
-  var response = UrlFetchApp.fetch(LT_SERVER + "languages");
+  Logger.log(getLTServer());
+  var response = UrlFetchApp.fetch(getLTServer() + "languages");
+  
   return response.getContentText();
 }
 
@@ -127,8 +143,7 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
   return "Selected";
 }
 
-
-function getShortContext(contextBefore, contextError, contextAfter,len) {
+function getShortContext(contextBefore, contextError, contextAfter, len) {
   var shortCntxt = "";
   if (contextBefore.length >= len) {
     shortCntxt = contextBefore.slice(-len);
@@ -146,6 +161,26 @@ function getShortContext(contextBefore, contextError, contextAfter,len) {
 
 function escapeRegExp(str) {
   return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
+function getUserProperties() {
+  var userProp = PropertiesService.getUserProperties();
+  if (userProp.getProperty("LT_SERVER") == null) {
+    userProp.setProperty("VARIANT_EN", "en-US");
+    userProp.setProperty("VARIANT_DE", "de-DE");
+    userProp.setProperty("VARIANT_PT", "pt-PT");
+    userProp.setProperty("VARIANT_CA", "ca-ES");
+    userProp.setProperty("LT_SERVER", LT_SERVER);
+  }
+  return userProp.getProperties();
+}
+
+function processForm(formObject) {
+  PropertiesService.getUserProperties().setProperty("LT_SERVER", formObject.lt_server);
+  PropertiesService.getUserProperties().setProperty("VARIANT_EN", formObject.variant_en);
+  PropertiesService.getUserProperties().setProperty("VARIANT_DE", formObject.variant_de);
+  PropertiesService.getUserProperties().setProperty("VARIANT_PT", formObject.variant_pt);
+  PropertiesService.getUserProperties().setProperty("VARIANT_CA", formObject.variant_ca);
 }
 
 /**
@@ -167,6 +202,6 @@ function showDialog() {
   var ui = HtmlService.createTemplateFromFile('Dialog')
     .evaluate()
     .setWidth(400)
-    .setHeight(190);
+    .setHeight(400);
   DocumentApp.getUi().showModalDialog(ui, DIALOG_TITLE);
 }

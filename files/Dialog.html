@@ -1,0 +1,69 @@
+<!-- Use a templated HTML printing scriptlet to import common stylesheet. -->
+<?!= HtmlService.createHtmlOutputFromFile('Stylesheet').getContent(); ?>
+
+<script>
+
+function onSuccess(userProp) {
+  if (userProp) {
+    document.getElementById("lt_server").value = userProp.LT_SERVER;
+    document.getElementById("variant_en").value = userProp.VARIANT_EN;
+    document.getElementById("variant_de").value = userProp.VARIANT_DE;
+    document.getElementById("variant_pt").value = userProp.VARIANT_PT;
+    document.getElementById("variant_ca").value = userProp.VARIANT_CA;
+  }
+}
+
+google.script.run.withSuccessHandler(onSuccess).getUserProperties();
+
+function handleFormSubmit(formObject) {
+  google.script.run.processForm(formObject);
+  google.script.host.close();
+}
+
+</script>
+
+ <form id="myForm" onsubmit="handleFormSubmit(this)">
+   <div class="block form-group">
+     <label for="lt_server">LanguageTool API server URL:</label>
+     <input type="text" id="lt_server" name="lt_server" style="width: 350px;">
+     <a href="#" onclick="document.getElementById('lt_server').value='https://languagetool.org/api/v2/'">Use default</a>
+   </div>
+  
+   <div class="block form-group">
+    <label for="variant_en" id="variant_en_desc">Assume this variety of English:</label>
+    <select id="variant_en" name="variant_en">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (GB)</option>
+        <option value="en-AU">English (Australian)</option>
+        <option value="en-CA">English (Canadian)</option>
+        <option value="en-NZ">English (New Zealand)</option>
+        <option value="en-ZA">English (South African)</option>
+    </select>
+    </div>
+    <div class="block form-group">
+    <label for="variant_de" id="variant_de_desc">Assume this variety of German:</label>
+    <select id="variant_de" name="variant_de">
+        <option value="de-DE">Deutsch (Deutschland)</option>
+        <option value="de-AT">Deutsch (Österreich)</option>
+        <option value="de-CH">Deutsch (Schweiz)</option>
+    </select>
+    </div>
+    <div class="block form-group">
+    <label for="variant_pt" id="variant_pt_desc">Assume this variety of Portuguese:</label>
+    <select id="variant_pt" name="variant_pt">
+        <option value="pt-PT">Português (Portugal)</option>
+        <option value="pt-BR">Português (Brasil)</option>
+    </select>
+    </div>
+    <div class="block form-group">
+    <label for="variant_ca" id="variant_ca_desc">Assume this variety of Catalan:</label>
+    <select id="variant_ca" name="variant_ca">
+        <option value="ca-ES">Català</option>
+        <option value="ca-ES-valencia">Català (Valencià)</option>
+    </select>
+    </div>
+  
+    <div class="block form-group">
+      <input type="submit" value="Submit" />
+    </div>
+ </form>

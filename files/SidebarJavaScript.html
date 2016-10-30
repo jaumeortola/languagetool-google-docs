@@ -217,7 +217,12 @@ function onClickCheck() {
           strbuilder += "</div>";
           list.append(strbuilder);
         }
-        list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="https://www.languagetool.org">languagetool.org</a></span></div>');
+                
+        google.script.run.withSuccessHandler(
+        function(obj) {
+          list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="' + obj.LT_SERVER + 'languages">' + extractDomain(obj.LT_SERVER)+ '</a></span></div>');
+        }).getUserProperties();
+                
         g_matches = matches; // store the results in a global variable
         focusOnError(0);
       })
@@ -232,6 +237,20 @@ function onClickCheck() {
 
 function escapeSingleQuote(sugg) {
   return sugg.replace("'","\\'");
+}
+
+function extractDomain(url) {
+  var domain;
+  //find & remove protocol (http, ftp, etc.) and get domain
+  if (url.indexOf("://") > -1) {
+    domain = url.split('/')[2];
+  }
+  else {
+    domain = url.split('/')[0];
+  }
+  //find & remove port number
+  domain = domain.split(':')[0];
+  return domain;
 }
 
 function showMessage(msg) {
