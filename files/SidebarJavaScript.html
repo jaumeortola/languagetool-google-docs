@@ -107,6 +107,16 @@ function removeError(i) {
   }
 }
 
+// remove all cases of the same error (same rule id and same wrong original text)
+function removeAllErrors(ruleId, contextError) {
+  for (i=0; i<g_matches.length; i++) {
+    if (g_matches[i].rule.id == ruleId 
+      && getContextError(g_matches[i]) == contextError) {
+         removeError(i);
+    }
+  }
+}
+
 function replaceSuggestion(i, replacement) {
   var context = splitAndTrimContext(g_matches[i]);
   var text = google.script.run
@@ -131,6 +141,10 @@ function replaceSuggestion(i, replacement) {
     .SelectText(context[0], context[1], context[2], replacement);
 }
 
+function getContextError(match) {
+  return match.context.text.substring(match.context.offset, match.context.offset + match.context.length);
+}
+
 function splitContext(match) {
   var context = match.context.text;
   var contextBefore = context.substring(0, match.context.offset);
@@ -152,7 +166,6 @@ function splitAndTrimContext(match) {
 }
 
 function onClickCheck() {
-
   var list = $('#things');
   list.empty();
   list.append("Checking...");
@@ -182,20 +195,24 @@ function onClickCheck() {
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
-          strbuilder = '<div class=match id=error' + i + ' onclick=focusOnError(' + i + ')>' + '<div class="icon-close" onclick=removeError(' + i + ')/><div class=message>' + match.message + '</div>';
           var context = splitContext(match);
-          var errortype = 'grammar_error';
+          strbuilder = '<div class=match id=error' + i + ' onclick=focusOnError(' + i + ')>';
+          strbuilder += "<div title='Ignore' class='icon-close' onclick=removeError(" + i + ")/>";
+          if (match.rule.issueType == "misspelling") {
+            strbuilder += "<div title='Ignore all' class='icon-close-all' onclick=removeAllErrors('" + match.rule.id + "','" + escapeSingleQuote(context[1]) + "')></div>";
+          }
+          strbuilder += '<div class=message>' + match.message + '</div>';
+          var errortype = 'grammar_error'; // blue by default
           if (match.rule.issueType == 'misspelling') {
             errortype = "spelling_error";
-          }
-          if (match.rule.issueType == 'style' || match.rule.issueType == 'locale-violation') {
+          } else if (match.rule.issueType == 'style' || match.rule.issueType == 'locale-violation') {
             errortype = "style_error";
           }
           strbuilder += "<div class=errorArea>" + context[0] + "<span class=" + errortype + ">" + context[1] + "</span>" + context[2] + "</div>";
           suggestions = match.replacements;
           suggestionsLen = Math.min(suggestions.length, MAX_REPLACEMENTS);
           for (var j = 0; j < suggestionsLen; j++) {
-            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + escapeSuggestion(suggestions[j].value) + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
+            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + escapeSingleQuote(suggestions[j].value) + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
           }
           strbuilder += "</div>";
           list.append(strbuilder);
@@ -213,7 +230,7 @@ function onClickCheck() {
 }
 
 
-function escapeSuggestion(sugg) {
+function escapeSingleQuote(sugg) {
   return sugg.replace("'","\\'");
 }
 
