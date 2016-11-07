@@ -30,12 +30,17 @@ function onInstall(e) {
   onOpen(e);
 }
 
-function getLTServer() {
-  var server = PropertiesService.getUserProperties().getProperty("LT_SERVER");
-  if (server != null && server.length > 5)
-    return server;
-  else 
-    return LT_SERVER;
+
+function getUserProperties() {
+  var userProp = PropertiesService.getUserProperties();
+  if (userProp.getProperty("LT_SERVER") == null) {
+    userProp.setProperty("VARIANT_EN", "en-US");
+    userProp.setProperty("VARIANT_DE", "de-DE");
+    userProp.setProperty("VARIANT_PT", "pt-PT");
+    userProp.setProperty("VARIANT_CA", "ca-ES");
+    userProp.setProperty("LT_SERVER", LT_SERVER);
+  }
+  return userProp.getProperties();
 }
 
 function CheckText(language) {
@@ -53,14 +58,12 @@ function CheckText(language) {
     "method": "post",
     "payload": data
   };
-  var response = UrlFetchApp.fetch(getLTServer() + "check", options);
+  var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "check", options);
   return response.getContentText();
 }
 
 function GetLanguages() {
-  Logger.log(getLTServer());
-  var response = UrlFetchApp.fetch(getLTServer() + "languages");
-  
+  var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "languages");
   return response.getContentText();
 }
 
@@ -163,17 +166,6 @@ function escapeRegExp(str) {
   return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 }
 
-function getUserProperties() {
-  var userProp = PropertiesService.getUserProperties();
-  if (userProp.getProperty("LT_SERVER") == null) {
-    userProp.setProperty("VARIANT_EN", "en-US");
-    userProp.setProperty("VARIANT_DE", "de-DE");
-    userProp.setProperty("VARIANT_PT", "pt-PT");
-    userProp.setProperty("VARIANT_CA", "ca-ES");
-    userProp.setProperty("LT_SERVER", LT_SERVER);
-  }
-  return userProp.getProperties();
-}
 
 function processForm(formObject) {
   PropertiesService.getUserProperties().setProperty("LT_SERVER", formObject.lt_server);
