@@ -57,12 +57,20 @@ function CheckText(language) {
     "method": "post",
     "payload": data
   };
-  var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "check", options);
+  try {
+    var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "check", options);
+  } catch (err) {
+    throw 'Error: Cannot conect to the server ' + getUserProperties().LT_SERVER;
+  }
   return response.getContentText();
 }
 
 function GetLanguages() {
-  var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "languages");
+  try {
+    var response = UrlFetchApp.fetch(getUserProperties().LT_SERVER + "languages");
+  } catch (err) {
+    throw 'Error: Cannot conect to the server ' + getUserProperties().LT_SERVER;
+  }
   return response.getContentText();
 }
 

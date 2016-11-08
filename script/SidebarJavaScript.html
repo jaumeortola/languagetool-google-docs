@@ -23,15 +23,14 @@ $(function() {
         for (j = 0; j < langList.length; j++) {
           languagesSelect.options[j + 1] = new Option(langList[j].name, langList[j].longCode);
         }
+        onClickCheck(); // start checking
+        document.onkeydown = checkKey;
       })
     .withFailureHandler(
-      function(msg, element) {
-        showMessage("Error: Cannot connect to server");
+      function(msg) {
+        showMessage(msg);
       })
     .GetLanguages();
- 
-  onClickCheck(); // start checking
-  document.onkeydown = checkKey;
 });
 
 
@@ -190,8 +189,7 @@ function onClickCheck() {
         list.empty();
         if (matches.length == 0) {
           list.append("No errors found.");
-          list.append("<br/><br/>");
-          return;
+          list.append("<br/>");
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
@@ -228,9 +226,9 @@ function onClickCheck() {
         focusOnError(0);
       })
     .withFailureHandler(
-      function(msg, element) {
+      function(msg) {
         // Respond to failure conditions here.
-          showMessage("Error: Cannot connect to server");
+        showMessage(msg);
       })
     .CheckText(language);
 }
