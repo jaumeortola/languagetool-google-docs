@@ -220,7 +220,8 @@ function onClickCheck() {
                 
         google.script.run.withSuccessHandler(
         function(obj) {
-          list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="' + obj.LT_SERVER + 'languages">' + extractDomain(obj.LT_SERVER)+ '</a></span></div>');
+          list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="' + extractLink(obj.LT_SERVER)
+            + '">' + extractDomain(obj.LT_SERVER)+ '</a></span></div>');
         }).getUserProperties();
                 
         g_matches = matches; // store the results in a global variable
@@ -237,6 +238,12 @@ function onClickCheck() {
 
 function escapeSingleQuote(sugg) {
   return sugg.replace("'","\\'");
+}
+
+function extractLink(url) {
+  var matches = url.match(/^(https?\:\/\/[^\/?#]+)(?:[\/?#]|$)/i);
+  var domainlink = matches && matches[1]; 
+  return domainlink;
 }
 
 function extractDomain(url) {
