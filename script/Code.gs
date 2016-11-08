@@ -30,7 +30,6 @@ function onInstall(e) {
   onOpen(e);
 }
 
-
 function getUserProperties() {
   var userProp = PropertiesService.getUserProperties();
   if (userProp.getProperty("LT_SERVER") == null) {
@@ -76,7 +75,6 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
   var contextAfter = escapeRegExp(cntxtAfter);
   var doc = DocumentApp.getActiveDocument();
   var body = doc.getBody();
-
   var rangeBefore;
   var rangeError;
   var rangeAfter;
@@ -163,7 +161,7 @@ function getShortContext(contextBefore, contextError, contextAfter, len) {
 }
 
 function escapeRegExp(str) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&").replace(/ /g,"\\s");
 }
 
 
