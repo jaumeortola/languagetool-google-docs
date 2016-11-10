@@ -8,4 +8,4 @@ LanguageTool is is an Open Source proof-reading program for English, French, Ger
 Install the last public version from the [Web Chrome Store](https://chrome.google.com/webstore/detail/languagetool/kjcoklfhicmkbfifghaecedbohbmofkm).
 
 ### Authors
-Jordi Mas (@jordimas), Jaume Ortolà (@jaumeortola).
+Jordi Mas ([@jordimas](https://github.com/jordimas)), Jaume Ortolà ([@jaumeortola](https://github.com/jaumeortola)).
