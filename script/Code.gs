@@ -6,6 +6,8 @@ var SIDEBAR_TITLE = 'LanguageTool proof­reading';
 
 var LT_SERVER = 'https://languagetool.org/api/v2/';
 //var LT_SERVER = 'https://www.softcatala.org/languagetool/api/v2/';
+var MAX_CHAR_LENGTH = 20000;
+var MIN_CHAR_LENGTH = 20;
 
 /**
  * Adds a custom menu with items to show the sidebar and dialog.
@@ -45,6 +47,14 @@ function getUserProperties() {
 function CheckText(language) {
   language = typeof language !== 'undefined' ? language : 'auto';
   var text = DocumentApp.getActiveDocument().getBody().getText();
+  textTotalLength = text.length;
+  var selectedText = getSelectedText();
+  if (selectedText && selectedText.length > MIN_CHAR_LENGTH && selectedText.length < MAX_CHAR_LENGTH) {
+    text = selectedText;
+  } else if (textTotalLength > MAX_CHAR_LENGTH) {
+    throw "The document is too long. Select some text between " + MIN_CHAR_LENGTH + " and " + MAX_CHAR_LENGTH + " characters."
+  }
+  var textCheckedLength = text.length;
   // avoid some bugs
   var cleanText = text.replace(/\n/g,"\n\n").replace(/[ \t]+\n/g, "\n");
   var data = "text=" + encodeURIComponent(cleanText) + "&language=" + language + "&useragent=googledocs";
@@ -62,8 +72,46 @@ function CheckText(language) {
   } catch (err) {
     throw 'Error: Cannot conect to the server ' + getUserProperties().LT_SERVER;
   }
-  return response.getContentText();
+  
+  var responseJson = JSON.parse(response.getContentText());
+  if (textCheckedLength > textTotalLength) {
+    textCheckedLength = textTotalLength
+  }
+  responseJson.extrainfo = "Checked " + textCheckedLength + " of " + textTotalLength + " characters."
+  
+  return JSON.stringify(responseJson);
 }
+
+function getSelectedText() {
+  var selectedText = "";
+  var selection = DocumentApp.getActiveDocument().getSelection();
+  if (selection) {
+    var elements = selection.getRangeElements();
+    for (var i = 0; i < elements.length; i++) {
+      if (elements[i].isPartial()) {
+        var element = elements[i].getElement().asText();
+        var startIndex = elements[i].getStartOffset();
+        var endIndex = elements[i].getEndOffsetInclusive();
+
+        selectedText += element.getText().substring(startIndex, endIndex + 1) + "\n";
+      } else {
+        var element = elements[i].getElement();
+        // Only translate elements that can be edited as text; skip images and
+        // other non-text elements.
+        if (element.editAsText) {
+          var elementText = element.asText().getText();
+          // This check is necessary to exclude images, which return a blank
+          // text element.
+          if (elementText != '') {
+            selectedText += elementText + "\n";
+          }
+        }
+      }
+    }
+  }
+  return selectedText;
+}
+
 
 function GetLanguages() {
   try {

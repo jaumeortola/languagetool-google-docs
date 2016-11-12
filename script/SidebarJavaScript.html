@@ -167,7 +167,7 @@ function splitAndTrimContext(match) {
 function onClickCheck() {
   var list = $('#things');
   list.empty();
-  list.append("Checking...");
+  list.append('<div class="message throbber"/>');
   var text = $('#text');
   text.removeClass().html("");
   var e = document.getElementById('languages-select')
@@ -187,9 +187,9 @@ function onClickCheck() {
         }
         var list = $('#things');
         list.empty();
+        showMessage(obj.extrainfo);
         if (matches.length == 0) {
-          list.append("No errors found.");
-          list.append("<br/>");
+          list.append('<div class="message">No errors found.</div>');
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
@@ -199,7 +199,7 @@ function onClickCheck() {
           if (match.rule.issueType == "misspelling") {
             strbuilder += "<div title='Ignore all' class='icon-close-all' onclick=removeAllErrors('" + match.rule.id + "','" + escapeSingleQuote(context[1]) + "')></div>";
           }
-          strbuilder += '<div class=message>' + match.message + '</div>';
+          strbuilder += '<div class=rulemessage>' + match.message + '</div>';
           var errortype = 'grammar_error'; // blue by default
           if (match.rule.issueType == 'misspelling') {
             errortype = "spelling_error";
@@ -210,7 +210,7 @@ function onClickCheck() {
           suggestions = match.replacements;
           suggestionsLen = Math.min(suggestions.length, MAX_REPLACEMENTS);
           for (var j = 0; j < suggestionsLen; j++) {
-            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + escapeSingleQuote(suggestions[j].value) + "')\">" + suggestions[j].value + "</a>&nbsp;&nbsp;";
+            strbuilder += "<a class=replacement onclick=\"replaceSuggestion(" + i + ",'" + escapeSingleQuote(suggestions[j].value) + "')\">" + escapeWhitespace(suggestions[j].value) + "</a>&nbsp;&nbsp;";
           }
           strbuilder += "</div>";
           list.append(strbuilder);
@@ -218,7 +218,7 @@ function onClickCheck() {
                 
         google.script.run.withSuccessHandler(
         function(obj) {
-          list.append('<div class="poweredBy">Text checked remotely by <a target="_blank" href="' + extractLink(obj.LT_SERVER)
+          list.append('<div class="poweredBy message">Text checked remotely by <a target="_blank" href="' + extractLink(obj.LT_SERVER)
             + '">' + extractDomain(obj.LT_SERVER)+ '</a></span></div>');
         }).getUserProperties();
                 
@@ -236,6 +236,14 @@ function onClickCheck() {
 
 function escapeSingleQuote(sugg) {
   return sugg.replace("'","\\'");
+}
+
+function escapeWhitespace(sugg) {
+  if (sugg == " ") {
+    return "&nbsp;&nbsp;&nbsp;";
+  } else {
+    return sugg;
+  }
 }
 
 function extractLink(url) {
@@ -261,6 +269,6 @@ function extractDomain(url) {
 function showMessage(msg) {
   var list = $('#things');
   list.empty();
-  list.append(msg);
+  list.append('<div class="message">' + msg + '</div>');
 }
 </script>
