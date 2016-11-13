@@ -10,6 +10,7 @@ function onSuccess(userProp) {
     document.getElementById("variant_de").value = userProp.VARIANT_DE;
     document.getElementById("variant_pt").value = userProp.VARIANT_PT;
     document.getElementById("variant_ca").value = userProp.VARIANT_CA;
+    document.getElementById("personal_dict").value = userProp.PERSONAL_DICT;
   }
 }
 
@@ -28,6 +29,11 @@ function handleFormSubmit(formObject) {
      <input type="text" id="lt_server" name="lt_server" style="width: 350px;">
      <a href="#" onclick="document.getElementById('lt_server').value='https://languagetool.org/api/v2/'">Use default</a>
    </div>
+   
+   <div class="block form-group">
+     <label for="personal_dict">Personal dictionary (comma separated list):</label>
+     <textarea id="personal_dict" name="personal_dict" rows="3" cols="50"></textarea>
+   </div>   
   
    <div class="block form-group">
     <label for="variant_en" id="variant_en_desc">Assume this variety of English:</label>
