@@ -1,17 +1,17 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script>
 /* Globals*/
-
 var MAX_REPLACEMENTS = 5;
 var g_matches = 0;
 var g_previous = -1;
+
 /**
  * Run initializations on sidebar load.
  */
 $(function() {
   // Assign handler functions to sidebar elements here, if needed.
   $('#sidebar-review-button').click(onClickCheck);
-  
+
   //add languages to drop down list
   var languagesSelect = document.getElementById('languages-select');
   languagesSelect.options[0] = new Option('(auto-detect)', 'auto');
@@ -35,26 +35,28 @@ $(function() {
 
 
 function checkKey(e) {
-    e = e || window.event;
-    if (e.keyCode == '37') { // left arrow
-       focusOnError (g_previous - 1, true);
-    }
-    else if (e.keyCode == '39') { // right arrow
-       focusOnError (g_previous + 1);
-    }
+  e = e || window.event;
+  if (e.keyCode == '37') { // left arrow
+    focusOnError(g_previous - 1, true);
+  } else if (e.keyCode == '39') { // right arrow
+    focusOnError(g_previous + 1);
+  }
 }
 
 function focusOnError(i, descending = false) {
   var error = $('#error' + i);
-  while (error.length == 0 && i < g_matches.length && i >= 0) {
-    if (descending) { 
+  while (i < g_matches.length && i >= 0 &&
+    (error.length == 0 || !error.is(":visible"))) {
+    if (descending) {
       i = i - 1;
     } else {
       i = i + 1;
     }
     error = $('#error' + i);
   }
-  if (i >= g_matches.length || i < 0) {
+  if (i >= g_matches.length || i < 0 ||
+    !error.is(":visible") ||
+    error.length == 0) {
     return; // do nothing, there is no more errors
   }
   var context = splitAndTrimContext(g_matches[i]);
@@ -62,8 +64,8 @@ function focusOnError(i, descending = false) {
     .withSuccessHandler(
       function(msg) {
         if (msg === "Selected") {
-          error.css('background-color', '#EEEEEE');
-          window.scroll(0,adjustScroll(error[0]));
+          error.css('border', '1px solid #3079ed');
+          window.scroll(0, adjustScroll(error[0]));
           if (g_previous != i) {
             removeFocusFromError(g_previous);
             g_previous = i;
@@ -79,22 +81,22 @@ function focusOnError(i, descending = false) {
 }
 
 function adjustScroll(obj) {
-   var offset = obj.offsetTop ;
-   var maxHeight = window.innerHeight * 0.70;
-   var minHeight = 76;
-   if (offset - window.scrollY > maxHeight) {
-     return offset - maxHeight;
-   } else if (offset - window.scrollY < minHeight) {
-     return offset - minHeight;
-   } else {
-     return window.scrollY;
-   }
+  var offset = obj.offsetTop;
+  var maxHeight = window.innerHeight * 0.70;
+  var minHeight = 76;
+  if (offset - window.scrollY > maxHeight) {
+    return offset - maxHeight;
+  } else if (offset - window.scrollY < minHeight) {
+    return offset - minHeight;
+  } else {
+    return window.scrollY;
+  }
 }
 
 function removeFocusFromError(i) {
   if (i >= 0 && i < g_matches.length) {
     var error = $('#error' + i);
-    error.css('background-color', '#FFFFFF');
+    error.css('border', 'none');
   }
 }
 
@@ -106,15 +108,33 @@ function removeError(i) {
   }
 }
 
-// remove all cases of the same error (same rule id and same wrong original text)
-function removeAllErrors(ruleId, contextError) {
-  for (i=0; i<g_matches.length; i++) {
-    if (g_matches[i].rule.id == ruleId 
-      && getContextError(g_matches[i]) == contextError) {
-         removeError(i);
+function addToDict(ruleId, contextError) {
+  // remove all cases of the same error (same rule id and same wrong original text)
+  for (i = 0; i < g_matches.length; i++) {
+    if (g_matches[i].rule.id == ruleId &&
+      getContextError(g_matches[i]) == contextError) {
+      removeError(i);
     }
   }
+  //add to personal dict.
+  google.script.run.addToDict(contextError);
 }
+
+function disableRule(ruleId) {
+  // remove all cases of the same error (same rule id and same wrong original text)
+  for (i = 0; i < g_matches.length; i++) {
+    if (g_matches[i].rule.id == ruleId) {
+      var error = $('#error' + i);
+      if (error.length > 0) {
+        error.css('display', 'none');
+      }
+    }
+  }
+  //add to disabled rules list (in Document properties)
+  google.script.run.addDisabledRule(ruleId);
+  showDisabledRules();
+}
+
 
 function replaceSuggestion(i, replacement) {
   var context = splitAndTrimContext(g_matches[i]);
@@ -164,6 +184,73 @@ function splitAndTrimContext(match) {
   return [contextBefore, contextError, contextAfter];
 }
 
+function isInPersonalDict(word, dict) {
+  var patt = new RegExp("(^|,)" + word + "($|,)");
+  return patt.test(dict);
+}
+
+function isRuleDisabled(ruleId, disabledRules) {
+  var patt = new RegExp("(^|,)" + ruleId + "($|,)");
+  return patt.test(disabledRules);
+}
+
+
+function indexOfRuleInArray(ruleid, disabledrules) {
+  var i;
+  for (i = 0; i < disabledrules.length; i++) {
+    if (disabledrules[i].id === ruleid) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function showDisabledRules() {
+  // Count disabled rules ocurrences
+  var disabledRules = [];
+  for (i = 0; i < g_matches.length; i++) {
+    var error = $('#error' + i);
+    // error block exists but it is not visible
+    if (error.length > 0 && !error.is(":visible")) {
+      var irule = indexOfRuleInArray(g_matches[i].rule.id, disabledRules);
+      if (irule < 0) {
+        var disabledrule = {};
+        disabledrule.id = g_matches[i].rule.id;
+        disabledrule.description = g_matches[i].rule.description;
+        disabledrule.count = 1;
+        disabledRules.push(disabledrule);
+      } else {
+        disabledRules[irule].count += 1;
+      }
+    }
+  }
+  //Build message
+  var disabledrulesmsg = $('#disabledrulesmsg');
+  var strbuilder = "";
+  for (i = 0; i < disabledRules.length; i++) {
+    if (i == 0) {
+      strbuilder += "These rules have been turned off, click a rule to turn it on again: "
+    } else {
+      strbuilder += ", ";
+    }
+    strbuilder += "<a href='#' onclick='enableRule(\"" + disabledRules[i].id + "\"); return false;' title='Enable rule'>" + disabledRules[i].description + "</a> (" + disabledRules[i].count + ")";
+  }
+  disabledrulesmsg.html(strbuilder);
+}
+
+function enableRule(ruleid) {
+  for (i = 0; i < g_matches.length; i++) {
+    var error = $('#error' + i);
+    // error block exists but it is not visible
+    if (error.length > 0 && !error.is(":visible") &&
+      g_matches[i].rule.id === ruleid) {
+      error.css('display', 'block');
+    }
+  }
+  google.script.run.removeFromDisabledRules(ruleid);
+  showDisabledRules();
+}
+
 function onClickCheck() {
   var list = $('#things');
   list.empty();
@@ -175,10 +262,8 @@ function onClickCheck() {
   var text = google.script.run
     .withSuccessHandler(
       function(msg) {
-
         var obj = JSON.parse(msg);
         var matches = obj.matches;
-
         for (var m = 0, n = e.options.length; m < n; ++m) {
           if (e.options[m].value === obj.language.code) {
             e.selectedIndex = m;
@@ -187,17 +272,27 @@ function onClickCheck() {
         }
         var list = $('#things');
         list.empty();
-        showMessage(obj.extrainfo);
+        list.append('<div class="secondary message">' + obj.extrainfo + '</div>');
         if (matches.length == 0) {
           list.append('<div class="message">No errors found.</div>');
         }
         for (var i = 0; i < matches.length; i++) {
           match = matches[i];
           var context = splitContext(match);
-          strbuilder = '<div class=match id=error' + i + ' onclick=focusOnError(' + i + ')>';
-          strbuilder += "<div title='Ignore' class='icon-close' onclick=removeError(" + i + ")/>";
+          // ignore words in the personal dictionary
+          if (match.rule.issueType == 'misspelling' && isInPersonalDict(context[1], obj.personaldict)) {
+            continue;
+          }
+          strbuilder = '<div class=match id=error' + i + ' onclick=focusOnError(' + i + ')';
+          if (isRuleDisabled(match.rule.id, obj.disabledrules)) {
+            strbuilder += ' style="display: none;"';
+          }
+          strbuilder += '>';
+          strbuilder += "<div title='Close' class='icon-close' onclick=removeError(" + i + ")/>";
           if (match.rule.issueType == "misspelling") {
-            strbuilder += "<div title='Ignore all' class='icon-close-all' onclick=removeAllErrors('" + match.rule.id + "','" + escapeSingleQuote(context[1]) + "')></div>";
+            strbuilder += "<div title='Add to dictionary' class='plus' onclick=addToDict('" + match.rule.id + "','" + escapeSingleQuote(context[1]) + "')></div>";
+          } else {
+            strbuilder += "<div title='Disable rule' class='bell' onclick=disableRule('" + match.rule.id + "')/>";
           }
           strbuilder += '<div class=rulemessage>' + match.message + '</div>';
           var errortype = 'grammar_error'; // blue by default
@@ -215,15 +310,12 @@ function onClickCheck() {
           strbuilder += "</div>";
           list.append(strbuilder);
         }
-                
-        google.script.run.withSuccessHandler(
-        function(obj) {
-          list.append('<div class="poweredBy message">Text checked remotely by <a target="_blank" href="' + extractLink(obj.LT_SERVER)
-            + '">' + extractDomain(obj.LT_SERVER)+ '</a></span></div>');
-        }).getUserProperties();
-                
+        list.append('<div id="disabledrulesmsg" class="secondary message"/></div>');
+        list.append('<div class="secondary message">Text checked remotely by <a target="_blank" href="' + extractLink(obj.ltserver) +
+          '">' + extractDomain(obj.ltserver) + '</a></span></div>');
         g_matches = matches; // store the results in a global variable
         focusOnError(0);
+        showDisabledRules();
       })
     .withFailureHandler(
       function(msg) {
@@ -233,9 +325,8 @@ function onClickCheck() {
     .CheckText(language);
 }
 
-
 function escapeSingleQuote(sugg) {
-  return sugg.replace("'","\\'");
+  return sugg.replace("'", "\\'");
 }
 
 function escapeWhitespace(sugg) {
@@ -248,7 +339,7 @@ function escapeWhitespace(sugg) {
 
 function extractLink(url) {
   var matches = url.match(/^(https?\:\/\/[^\/?#]+)(?:[\/?#]|$)/i);
-  var domainlink = matches && matches[1]; 
+  var domainlink = matches && matches[1];
   return domainlink;
 }
 
@@ -257,8 +348,7 @@ function extractDomain(url) {
   //find & remove protocol (http, ftp, etc.) and get domain
   if (url.indexOf("://") > -1) {
     domain = url.split('/')[2];
-  }
-  else {
+  } else {
     domain = url.split('/')[0];
   }
   //find & remove port number

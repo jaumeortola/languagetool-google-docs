@@ -20,7 +20,7 @@ function onOpen(e) {
     .addItem("Check", 'showSidebar')
     .addItem("Options", 'showDialog')
     .addToUi();
- }
+}
 
 /**
  * Runs when the add-on is installed; calls onOpen() to ensure menu creation and
@@ -40,8 +40,18 @@ function getUserProperties() {
     userProp.setProperty("VARIANT_PT", "pt-PT");
     userProp.setProperty("VARIANT_CA", "ca-ES");
     userProp.setProperty("LT_SERVER", LT_SERVER);
+    userProp.setProperty("PERSONAL_DICT", "");
   }
   return userProp.getProperties();
+}
+
+
+function getDocumentProperties() {
+  var docProp = PropertiesService.getDocumentProperties();
+  if (docProp.getProperty("DISABLED_RULES") == null) {
+    docProp.setProperty("DISABLED_RULES", "");
+  }
+  return docProp.getProperties();
 }
 
 function CheckText(language) {
@@ -56,11 +66,11 @@ function CheckText(language) {
   }
   var textCheckedLength = text.length;
   // avoid some bugs
-  var cleanText = text.replace(/\n/g,"\n\n").replace(/[ \t]+\n/g, "\n");
+  var cleanText = text.replace(/\n/g, "\n\n").replace(/[ \t]+\n/g, "\n");
   var data = "text=" + encodeURIComponent(cleanText) + "&language=" + language + "&useragent=googledocs";
+  var userProp = PropertiesService.getUserProperties();
   if (language == "auto") {
-    var userProp = PropertiesService.getUserProperties();
-    var preferredVariants= userProp.getProperty("VARIANT_EN")+","+ userProp.getProperty("VARIANT_DE")+","+ userProp.getProperty("VARIANT_PT")+","+ userProp.getProperty("VARIANT_CA");
+    var preferredVariants = userProp.getProperty("VARIANT_EN") + "," + userProp.getProperty("VARIANT_DE") + "," + userProp.getProperty("VARIANT_PT") + "," + userProp.getProperty("VARIANT_CA");
     data += "&preferredVariants=" + preferredVariants;
   }
   var options = {
@@ -72,13 +82,16 @@ function CheckText(language) {
   } catch (err) {
     throw 'Error: Cannot conect to the server ' + getUserProperties().LT_SERVER;
   }
-  
+
   var responseJson = JSON.parse(response.getContentText());
   if (textCheckedLength > textTotalLength) {
     textCheckedLength = textTotalLength
   }
   responseJson.extrainfo = "Checked " + textCheckedLength + " of " + textTotalLength + " characters."
-  
+  responseJson.personaldict = userProp.getProperty("PERSONAL_DICT");
+  responseJson.disabledrules = getDocumentProperties().DISABLED_RULES;
+  responseJson.ltserver = userProp.getProperty("LT_SERVER");
+
   return JSON.stringify(responseJson);
 }
 
@@ -144,14 +157,14 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
   }
   if (rangeBefore != null) {
     // try to find the error after rangeBefore 
-    rangeError = body.findText(contextError, rangeBefore);    
+    rangeError = body.findText(contextError, rangeBefore);
   } else if (rangeAfter != null) {
-      // try to find from the start of the paragraph containing rangeAfter
-      rangeError = rangeAfter.getElement().asText().findText(contextError);
-      while (rangeAfter.getStartOffset() - rangeError.getEndOffsetInclusive() > 2 &&
-        rangeAfter.getStartOffset() > rangeError.getEndOffsetInclusive()) {
-          rangeError = body.findText(contextError, rangeError);
-        }
+    // try to find from the start of the paragraph containing rangeAfter
+    rangeError = rangeAfter.getElement().asText().findText(contextError);
+    while (rangeAfter.getStartOffset() - rangeError.getEndOffsetInclusive() > 2 &&
+      rangeAfter.getStartOffset() > rangeError.getEndOffsetInclusive()) {
+      rangeError = body.findText(contextError, rangeError);
+    }
   }
   // try to find the paragraph containing the "short" context. 
   if (rangeError == null) {
@@ -160,7 +173,7 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
     if (rangeAux != null) {
       rangeError = rangeAux.getElement().asText().findText(contextError);
     }
-  } 
+  }
   // the error is at the sentence end
   if (rangeError == null) {
     var shortContext = escapeRegExp(getShortContext(cntxtBefore, cntxtError, "", 5));
@@ -168,7 +181,7 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
     if (rangeAux != null) {
       rangeError = rangeAux.getElement().asText().findText(contextError);
     }
-  } 
+  }
   // the error is at the sentence start
   if (rangeError == null) {
     var shortContext = escapeRegExp(getShortContext("", cntxtError, cntxtAfter, 5));
@@ -176,12 +189,12 @@ function SelectText(cntxtBefore, cntxtError, cntxtAfter, replacement) {
     if (rangeAux != null) {
       rangeError = rangeAux.getElement().asText().findText(contextError);
     }
-  } 
+  }
   // Catch-all case. Try to find error anywhere.
   if (rangeError == null) {
     rangeError = body.findText(contextError);
   }
- 
+
   if (rangeError == null || (rangeAfter != null && rangeError.getEndOffsetInclusive() > rangeAfter.getStartOffset())) {
     return "NotFound";
   }
@@ -209,7 +222,7 @@ function getShortContext(contextBefore, contextError, contextAfter, len) {
   }
   shortCntxt = shortCntxt + contextError;
   if (contextAfter.length >= len) {
-    shortCntxt = shortCntxt + contextAfter.substring(0,len);
+    shortCntxt = shortCntxt + contextAfter.substring(0, len);
   } else {
     shortCntxt = shortCntxt + contextAfter;
   }
@@ -217,7 +230,7 @@ function getShortContext(contextBefore, contextError, contextAfter, len) {
 }
 
 function escapeRegExp(str) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&").replace(/ /g,"\\s");
+  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&").replace(/ /g, "\\s");
 }
 
 
@@ -227,6 +240,34 @@ function processForm(formObject) {
   PropertiesService.getUserProperties().setProperty("VARIANT_DE", formObject.variant_de);
   PropertiesService.getUserProperties().setProperty("VARIANT_PT", formObject.variant_pt);
   PropertiesService.getUserProperties().setProperty("VARIANT_CA", formObject.variant_ca);
+  PropertiesService.getUserProperties().setProperty("DISABLED_RULES", formObject.disabled_rules);
+  PropertiesService.getUserProperties().setProperty("ENABLED_RULES", formObject.enabled_rules);
+  PropertiesService.getUserProperties().setProperty("PERSONAL_DICT", formObject.personal_dict);
+}
+
+function addToDict(word) {
+  var userProp = PropertiesService.getUserProperties();
+  var personaldict = userProp.getProperty("PERSONAL_DICT");
+  if (personaldict.length > 0) {
+    personaldict += ",";
+  }
+  userProp.setProperty("PERSONAL_DICT", personaldict + word);
+}
+
+function addDisabledRule(ruleId) {
+  var docProp = PropertiesService.getDocumentProperties();
+  var disabledrules = docProp.getProperty("DISABLED_RULES");
+  if (disabledrules.length == 0) {
+    disabledrules += ",";
+  }
+  docProp.setProperty("DISABLED_RULES", disabledrules + ruleId + ",");
+}
+
+function removeFromDisabledRules(ruleId) {
+  var docProp = PropertiesService.getDocumentProperties();
+  var disabledrules = docProp.getProperty("DISABLED_RULES");
+  var disabledrules = disabledrules.replace("," + ruleId + ",", ",");
+  docProp.setProperty("DISABLED_RULES", disabledrules);
 }
 
 /**
@@ -248,6 +289,6 @@ function showDialog() {
   var ui = HtmlService.createTemplateFromFile('Dialog')
     .evaluate()
     .setWidth(400)
-    .setHeight(400);
+    .setHeight(500);
   DocumentApp.getUi().showModalDialog(ui, DIALOG_TITLE);
 }
