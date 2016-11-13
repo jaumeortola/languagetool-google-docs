@@ -266,7 +266,7 @@ function addDisabledRule(ruleId) {
 function removeFromDisabledRules(ruleId) {
   var docProp = PropertiesService.getDocumentProperties();
   var disabledrules = docProp.getProperty("DISABLED_RULES");
-  var disabledrules = disabledrules.replace("," + ruleId + ",", ",");
+  var disabledrules = disabledrules.replace(new RegExp("(,|^)" + ruleId + "(,|$)", 'g'), ",");
   docProp.setProperty("DISABLED_RULES", disabledrules);
 }
 
