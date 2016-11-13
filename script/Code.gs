@@ -40,6 +40,8 @@ function getUserProperties() {
     userProp.setProperty("VARIANT_PT", "pt-PT");
     userProp.setProperty("VARIANT_CA", "ca-ES");
     userProp.setProperty("LT_SERVER", LT_SERVER);
+  }
+  if (userProp.getProperty("PERSONAL_DICT") == null) {
     userProp.setProperty("PERSONAL_DICT", "");
   }
   return userProp.getProperties();
