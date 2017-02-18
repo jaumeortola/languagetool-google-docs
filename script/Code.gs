@@ -1,7 +1,7 @@
 /**
  * Server side code
  */
-var DIALOG_TITLE = 'LanuageTool Options';
+var DIALOG_TITLE = 'LanguageTool Options';
 var SIDEBAR_TITLE = 'LanguageTool proof­reading';
 
 var LT_SERVER = 'https://languagetool.org/api/v2/';
